@@ -113,7 +113,7 @@ func (kuser kubeuser) submitCSR(ctx context.Context, kubeclient *kubernetes.Clie
 	csrName := fmt.Sprintf("kcgen-%s-%x", kuser.Username, suffix)
 
 	// lets build the kubernetes CSR Object
-	csr := &certificatesv1.CertificateSigningRequest{
+	kubeCSR := &certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: csrName,
 		},
@@ -127,6 +127,13 @@ func (kuser kubeuser) submitCSR(ctx context.Context, kubeclient *kubernetes.Clie
 			},
 		},
 	}
+
+	created, err := kubeclient.CertificatesV1().CertificateSigningRequests().Create(ctx, kubeCSR, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to submit CSR %s: %w", csrName, err)
+	}
+
+	return created, nil
 }
 
 func genkubeclient() (*kubernetes.Clientset, string, error) {
@@ -171,6 +178,7 @@ func main() {
 	if err != nil {
 		return err
 	}
+	log.Println("Generated the private key and csr")
 
 	// The kubernetes client requires a context definition for stuff like timeouts
 	// We're really not going to use it but need to define it to fufil the contracts.
@@ -181,6 +189,7 @@ func main() {
 	if err != nil {
 		return err
 	}
+	log.Println("Created CSR")
 
 	// Approve the CSR
 
